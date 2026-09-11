@@ -1,0 +1,53 @@
+name: Build idf-custom + dockerc
+
+on:
+  push:
+    tags: ['v*']
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-24.04-arm
+    permissions:
+      contents: write   # needed to create a release
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Build image
+        run: |
+          docker build -t idf-custom:latest-esp32c3 \
+            --build-arg IDF_CLONE_BRANCH_OR_TAG=master \
+            --build-arg IDF_CLONE_SHALLOW=1 \
+            --build-arg IDF_INSTALL_TARGETS=esp32c3 \
+            tools/docker
+
+      - name: Save image to tarball
+        run: docker save idf-custom:latest-esp32c3 -o idf-custom.tar
+
+      - name: Download dockerc
+        run: |
+          wget https://github.com/NilsIrl/dockerc/releases/download/v0.3.2/dockerc_aarch64
+          chmod +x dockerc_aarch64
+
+      - name: Compile image with dockerc
+        run: |
+          ./dockerc_aarch64 --image idf-custom.tar --output idf-custom-esp32c3
+          # optionally set the entrypoint/arg you want to run by default:
+          # ./dockerc_aarch64 --image idf-custom.tar --output idf-custom-esp32c3 -- idf.py --help
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: idf-custom-esp32c3-arm64
+          path: idf-custom-esp32c3
+
+      - name: Create Release
+        if: startsWith(github.ref, 'refs/tags/')
+        uses: softprops/action-gh-release@v2
+        with:
+          files: idf-custom-esp32c3
