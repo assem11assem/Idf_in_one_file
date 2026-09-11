@@ -34,16 +34,13 @@ jobs:
             --build-arg IDF_INSTALL_TARGETS=esp32c3 \
             tools/docker
 
-      - name: Save image
-        run: docker save idf-custom:latest-esp32c3 -o idf-custom.tar
-
       - name: Fetch dockerc
         run: |
           wget -q https://github.com/NilsIrl/dockerc/releases/download/v0.3.2/dockerc_aarch64
           chmod +x dockerc_aarch64
 
       - name: Compile to standalone binary
-        run: ./dockerc_aarch64 --image idf-custom.tar --output idf-custom-esp32c3
+        run: ./dockerc_aarch64 --image docker-daemon:idf-custom:latest-esp32c3 --output idf-custom-esp32c3
 
       - name: Upload artifact
         uses: actions/upload-artifact@v4
